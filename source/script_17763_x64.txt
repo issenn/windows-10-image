@@ -1,0 +1,27 @@
+http://download.windowsupdate.com/d/msdownload/update/software/updt/2022/01/windows10.0-kb5010791-x64_466ad2172d2cc77b2125420c26b7f9ac00e197f4.msu
+  out=windows10.0-kb5010791-x64_466ad2172d2cc77b2125420c26b7f9ac00e197f4-cu.msu
+  checksum=sha-1=466ad2172d2cc77b2125420c26b7f9ac00e197f4
+
+http://download.windowsupdate.com/c/msdownload/update/software/secu/2021/12/windows10.0-kb5008878-x64-ndp48_1b3c7e40c5ba4b6325148980b4d939d5ae8d391d.msu
+  out=windows10.0-kb5008878-x64-ndp48_1b3c7e40c5ba4b6325148980b4d939d5ae8d391d-cu.msu
+  checksum=sha-1=1b3c7e40c5ba4b6325148980b4d939d5ae8d391d
+
+http://download.windowsupdate.com/d/msdownload/update/software/crup/2021/08/windows10.0-kb5005545-x64_b476c22b52917ad95a4f16c615c9d10c328b0347.cab
+  out=windows10.0-kb5005545-x64_b476c22b52917ad95a4f16c615c9d10c328b0347-du.cab
+  checksum=sha-1=b476c22b52917ad95a4f16c615c9d10c328b0347
+
+http://download.windowsupdate.com/d/msdownload/update/software/ftpk/2020/01/windows10.0-kb4486153-x64_43ee33b302bfdba470542a128a9ee0b58faa5412.msu
+  out=windows10.0-kb4486153-x64_43ee33b302bfdba470542a128a9ee0b58faa5412-net48.msu
+  checksum=sha-1=43ee33b302bfdba470542a128a9ee0b58faa5412
+
+http://download.windowsupdate.com/d/msdownload/update/software/ftpk/2019/08/windows10.0-kb4486155-x64_78eea67f76d827934139d7620291d5b9897d1b8d.msu
+  out=windows10.0-kb4486155-x64_78eea67f76d827934139d7620291d5b9897d1b8d-net48_zhcn.msu
+  checksum=sha-1=78eea67f76d827934139d7620291d5b9897d1b8d
+
+http://download.windowsupdate.com/c/msdownload/update/software/crup/2019/08/windows10.0-kb4506578-x64_c8bad38b2c405ca3fa0c522df2ca6ef26bfd6d1e.cab
+  out=windows10.0-kb4506578-x64_c8bad38b2c405ca3fa0c522df2ca6ef26bfd6d1e.cab
+  checksum=sha-1=c8bad38b2c405ca3fa0c522df2ca6ef26bfd6d1e
+
+http://download.windowsupdate.com/c/msdownload/update/software/secu/2021/01/windows10.0-kb4535680-x64_4a6f51365ed7f4c9ad34986aa2f61005af267e24.msu
+  out=windows10.0-kb4535680-x64_4a6f51365ed7f4c9ad34986aa2f61005af267e24.cab
+  checksum=sha-1=4a6f51365ed7f4c9ad34986aa2f61005af267e24
