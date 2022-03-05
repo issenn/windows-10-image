@@ -74,7 +74,7 @@ set "ISODir="
 set Delete_Source=0
 
 :: LTSC 2021 Libs Fix
-set ltscfix="
+set "ltscfix="
 
 :: ###################################################################
 :: # NORMALLY THERE IS NO NEED TO CHANGE ANYTHING BELOW THIS COMMENT #

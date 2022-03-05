@@ -59,6 +59,7 @@ goto :EOF
 :START_PROCESS
 set "aria2=bin\aria2c.exe"
 set "a7z=bin\7z.exe"
+set _dism="C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe"
 set "patchDir=patch"
 set "ISODir=ISO"
 set "build="
@@ -66,10 +67,12 @@ set "arch="
 
 if NOT EXIST %aria2% goto :NO_ARIA2_ERROR
 if NOT EXIST %a7z% goto :NO_FILE_ERROR
-:: if NOT EXIST %uupConv% goto :NO_FILE_ERROR
-:: if NOT EXIST ConvertConfig.ini goto :NO_FILE_ERROR
+if NOT EXIST %_dism% (
+  set "_dism=dism.exe"
+  if NOT EXIST !_dism! goto :NO_FILE_ERROR
+)
 
-dir /b /a:-d Win10*.iso 1>nul 2>nul && (for /f "delims=" %%# in ('dir /b /a:-d *.iso') do set "isofile=%%#")
+:: dir /b /a:-d Win10*.iso 1>nul 2>nul && (for /f "delims=" %%# in ('dir /b /a:-d *.iso') do set "isofile=%%#")
 :: if EXIST "Win10*.iso" goto :NO_ISO_PATCHED_ERROR
 if NOT EXIST "base\*.iso" goto :NO_ISO_ERROR
 dir /b /a:-d "base\*.iso" 1>nul 2>nul && (for /f "delims=" %%# in ('dir /b /a:-d "base\*.iso"') do set "isofile=base\%%#")
@@ -77,15 +80,15 @@ if EXIST "%~dp0%ISODir%" rmdir /s /q "%~dp0%ISODir%"
 %a7z% x "%~dp0%isofile%" -o"%~dp0%ISODir%" -r
 
 if EXIST "%~dp0%ISODir%\sources\install.esd" (
-    dism.exe /english /Export-Image /SourceImageFile:%~dp0%ISODir%\sources\install.esd /All /DestinationImageFile:%~dp0%ISODir%\sources\install.wim /Compress:max
-    del /f /q "%~dp0%ISODir%\sources\install.esd"
+  %_dism% /English /Export-Image /SourceImageFile:%~dp0%ISODir%\sources\install.esd /All /DestinationImageFile:%~dp0%ISODir%\sources\install.wim /Compress:max
+  del /f /q "%~dp0%ISODir%\sources\install.esd"
 )
 
 if NOT EXIST "%~dp0%ISODir%\sources\install.wim" (goto :NOT_SUPPORT)
 
-dism.exe /english /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 | find /i "Version : 10.0" 1>nul || (set "MESSAGE=发现 wim 版本不是 Windows 10 或 11 / Detected wim version is not Windows 10 or 11"&goto :EOF)
-for /f "tokens=4 delims=:. " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 ^| find /i "Version :"') do set build=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 ^| find /i "Architecture"') do set arch=%%#
+%_dism% /English /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 | find /i "Version : 10.0" 1>nul || (set "MESSAGE=发现 wim 版本不是 Windows 10 或 11 / Detected wim version is not Windows 10 or 11"&goto :EOF)
+for /f "tokens=4 delims=:. " %%# in ('dism.exe /English /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 ^| find /i "Version :"') do set build=%%#
+for /f "tokens=2 delims=: " %%# in ('dism.exe /English /get-wiminfo /wimfile:"%~dp0%ISODir%\sources\install.wim" /index:1 ^| find /i "Architecture"') do set arch=%%#
 
 if %build%==19041 (set /a build=19044)
 if %build%==19042 (set /a build=19044)
@@ -141,7 +144,7 @@ goto :EOF
 
 :DOWNLOAD_ERROR
 echo.
-echo 下载文件错误，请重新尝试。
+:: echo 下载文件错误，请重新尝试。
 echo We have encountered an error while downloading files.
 pause
 goto :EOF
@@ -149,13 +152,13 @@ goto :EOF
 :NOT_SUPPORT
 echo.
 rmdir /s /q "%~dp0%ISODir%"
-echo 不支持此 ISO 版本。或 ISO 文件异常。
+:: echo 不支持此 ISO 版本。或 ISO 文件异常。
 echo Not support this version ISO. or the ISO file error.
 echo Version: %build%, Architecture: %arch%
 pause
 goto :EOF
 
-echo 输入 7 退出。
+:: echo 输入 7 退出。
 echo Press 7 to exit.
 choice /c 7 /n
 if errorlevel 1 (goto :eof) else (rem.)
