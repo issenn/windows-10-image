@@ -14,7 +14,7 @@ title Patching Official ISO...
 :: https://aria2.github.io/manual/en/html/aria2c.html#cmdoption-all-proxy
 :: https://aria2.github.io/manual/en/html/aria2c.html#environment
 
-set "all_proxy=10.0.0.102:7890"
+set "all_proxy=127.0.0.1:3129"
 
 :: End of proxy configuration
 
@@ -69,7 +69,7 @@ if NOT EXIST %aria2% goto :NO_ARIA2_ERROR
 if NOT EXIST %a7z% goto :NO_FILE_ERROR
 if NOT EXIST %_dism% (
   set "_dism=dism.exe"
-  if NOT EXIST !_dism! goto :NO_FILE_ERROR
+  @REM if NOT EXIST !_dism! goto :NO_FILE_ERROR
 )
 
 :: dir /b /a:-d Win10*.iso 1>nul 2>nul && (for /f "delims=" %%# in ('dir /b /a:-d *.iso') do set "isofile=%%#")

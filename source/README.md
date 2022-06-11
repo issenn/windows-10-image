@@ -21,9 +21,10 @@ KB5011352
 # kb5010793
 # kb5009596
 # kb5010342
-http://download.windowsupdate.com/c/msdownload/update/software/updt/2022/02/windows10.0-kb5010415-x64_766d3ac841ef044b339f1e4fdd292381d311659b.msu
-  out=windows10.0-kb5010415-x64_766d3ac841ef044b339f1e4fdd292381d311659b-cu.msu
-  checksum=sha-1=766d3ac841ef044b339f1e4fdd292381d311659b
+# kb5010415
+http://download.windowsupdate.com/c/msdownload/update/software/secu/2022/03/windows10.0-kb5011487-x64_2190163dcb84974d93ecdc32bdae277b57ebb95c.msu
+  out=windows10.0-kb5011487-x64_2190163dcb84974d93ecdc32bdae277b57ebb95c-cu.msu
+  checksum=sha-1=2190163dcb84974d93ecdc32bdae277b57ebb95c
 
 # NetFx NDP35-48
 # MainOS
@@ -53,9 +54,10 @@ http://download.windowsupdate.com/c/msdownload/update/software/crup/2021/11/wind
 # WinRE #WinPE
 # DU for SafeOS
 # KB5007324
-http://download.windowsupdate.com/c/msdownload/update/software/crup/2022/01/windows10.0-kb5009645-x64_4d1366ca0f6c12781d5fc0b783869ed0f5db4613.cab
-  out=windows10.0-kb5009645-x64_4d1366ca0f6c12781d5fc0b783869ed0f5db4613.cab
-  checksum=sha-1=4d1366ca0f6c12781d5fc0b783869ed0f5db4613
+# kb5009645
+http://download.windowsupdate.com/c/msdownload/update/software/crup/2022/03/windows10.0-kb5012419-x64_b58ae0266bcd713acc15609ccfffc774cfdf9ef6.cab
+  out=windows10.0-kb5012419-x64_b58ae0266bcd713acc15609ccfffc774cfdf9ef6.cab
+  checksum=sha-1=b58ae0266bcd713acc15609ccfffc774cfdf9ef6
 
 # Intel Microcode Update
 # Windows10.0-KB4589212-v2-x64_PSFX.cab
