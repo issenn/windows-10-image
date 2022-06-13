@@ -108,6 +108,8 @@ set "cmd_source=%~4"
 
 :NoProgArgs
 set "SysPath=%SystemRoot%\System32"
+:: [The 'Sysnative' folder in 64-bit Windows explained](https://www.samlogic.net/articles/sysnative-folder-64-bit-windows.htm)
+:: Using the 'Sysnative' folder will help you access 64-bit tools from 32-bit code
 if exist "%SystemRoot%\Sysnative\reg.exe" (set "SysPath=%SystemRoot%\Sysnative")
 set "Path=%SysPath%;%SystemRoot%;%SysPath%\Wbem;%SysPath%\WindowsPowerShell\v1.0\"
 set "xOS=amd64"
@@ -119,8 +121,9 @@ set "_Null=1>nul 2>nul"
 set "_err===== ERROR ===="
 for /f "tokens=6 delims=[]. " %%# in ('ver') do set winbuild=%%#
 set _cwmi=0
+:: wmic.exe is removed on Windows 11
 for %%# in (wmic.exe) do @if not "%%~$PATH:#"=="" (
-wmic path Win32_ComputerSystem get CreationClassName /value 2>nul | find /i "ComputerSystem" 1>nul && set _cwmi=1
+  wmic path Win32_ComputerSystem get CreationClassName /value 2>nul | find /i "ComputerSystem" 1>nul && set _cwmi=1
 )
 set _pwsh=1
 for %%# in (powershell.exe) do @if "%%~$PATH:#"=="" set _pwsh=0
@@ -141,20 +144,21 @@ set psfnet=0
 if exist "%SystemRoot%\Microsoft.NET\Framework\v4.0.30319\ngen.exe" set psfnet=1
 if exist "%SystemRoot%\Microsoft.NET\Framework\v2.0.50727\ngen.exe" set psfnet=1
 if %_pwsh% equ 0 set psfnet=0
+:: find workspace drive
 for %%# in (E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-set "_adr%%#=%%#"
+  set "_adr%%#=%%#"
 )
 if %_cwmi% equ 1 for /f "tokens=2 delims==:" %%# in ('"wmic path Win32_Volume where (DriveLetter is not NULL) get DriveLetter /value" ^| findstr ^=') do (
-if defined _adr%%# set "_adr%%#="
+  if defined _adr%%# set "_adr%%#="
 )
 if %_cwmi% equ 1 for /f "tokens=2 delims==:" %%# in ('"wmic path Win32_LogicalDisk where (DeviceID is not NULL) get DeviceID /value" ^| findstr ^=') do (
-if defined _adr%%# set "_adr%%#="
+  if defined _adr%%# set "_adr%%#="
 )
 if %_cwmi% equ 0 for /f "tokens=1 delims=:" %%# in ('powershell -nop -c "(([WMISEARCHER]'Select * from Win32_Volume where DriveLetter is not NULL').Get()).DriveLetter; (([WMISEARCHER]'Select * from Win32_LogicalDisk where DeviceID is not NULL').Get()).DeviceID"') do (
-if defined _adr%%# set "_adr%%#="
+  if defined _adr%%# set "_adr%%#="
 )
 for %%# in (E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-if not defined _sdr (if defined _adr%%# set "_sdr=%%#:")
+  if not defined _sdr (if defined _adr%%# set "_sdr=%%#:")
 )
 if not defined _sdr set psfnet=0
 set "_Pkt=31bf3856ad364e35"
@@ -193,35 +197,37 @@ echo The window will be closed when finished
 
 :Begin
 title Installer for Windows NT 10.0 Updates
+:: log output location
 set "_dLog=%SystemRoot%\Logs\DISM"
 cd /d "!_work!"
 if not exist "W10UI.ini" goto :proceed
+:: Load configuration from config file
 find /i "[W10UI-Configuration]" W10UI.ini %_Nul1% || goto :proceed
 setlocal DisableDelayedExpansion
 for %%# in (
-target
-repo
-dismroot
-net35
-net35source
-cleanup
-resetbase
-winre
-lcuwinre
-updtbootfiles
-skipedge
-_cabdir
-mountdir
-winremount
-wim2esd
-wim2swm
-iso
-isodir
-delete_source
-autostart
-ltscfix
+  target
+  repo
+  dismroot
+  net35
+  net35source
+  cleanup
+  resetbase
+  winre
+  lcuwinre
+  updtbootfiles
+  skipedge
+  _cabdir
+  mountdir
+  winremount
+  wim2esd
+  wim2swm
+  iso
+  isodir
+  delete_source
+  autostart
+  ltscfix
 ) do (
-call :ReadINI %%#
+  call :ReadINI %%#
 )
 setlocal EnableDelayedExpansion
 goto :proceed
@@ -232,6 +238,7 @@ for /f "skip=2 tokens=1* delims==" %%A in ('find /i "%1 " W10UI.ini') do call se
 goto :eof
 
 :proceed
+:: Initial default configuration if not set
 if %_Debug% neq 0 set autostart=1
 if "!repo!"=="" set "repo=!_work!"
 if "!dismroot!"=="" set "DismRoot=dism.exe"
@@ -250,14 +257,16 @@ if "%AutoStart%"=="" set AutoStart=0
 if "%Delete_Source%"=="" set Delete_Source=0
 if "%wim2esd%"=="" set wim2esd=0
 if "%wim2swm%"=="" set wim2swm=0
+:: find Windows Kits ADK
 set _ADK=0
 set "showdism=Host OS"
 set "_dism2=%dismroot% /English /NoRestart /ScratchDir"
 if /i not "!dismroot!"=="dism.exe" (
-set _ADK=1
-set "showdism=%dismroot%"
-set _dism2="%dismroot%" /English /NoRestart /ScratchDir
+  set _ADK=1
+  set "showdism=%dismroot%"
+  set _dism2="%dismroot%" /English /NoRestart /ScratchDir
 )
+:: set workspace tmp dir path with filesystem
 set _drv=%~d0
 if /i "%_cabdir:~0,5%"=="W10UI" set "_cabdir=%_drv%\W10UItemp"
 set _ntf=NTFS
@@ -275,22 +284,23 @@ if not "!mountdir!"=="!mountdir: =!" set "mountdir=!mountdir: =!"
 set "mountdir=!mountdir!_%random%"
 set "winremount=!winremount!_%random%"
 set "_cabdir=!_cabdir!_%random%"
+:: Load configuration from commandline arguments
 if defined cmd_target if defined cmd_tmpdir if exist "!cmd_target!\Windows\regedit.exe" (
-set "Target=!cmd_target!"
-set "_cabdir=!cmd_tmpdir!"
-set "repo=!_work!"
-if defined cmd_source if exist "!cmd_source!\sxs\*netfx3*.cab" set "Net35Source=!cmd_source!\sxs"
-if defined cmd_source if exist "!cmd_source!\setup.exe" set _offdu=1
-set AutoStart=1
-set _embd=1
+  set "Target=!cmd_target!"
+  set "_cabdir=!cmd_tmpdir!"
+  set "repo=!_work!"
+  if defined cmd_source if exist "!cmd_source!\sxs\*netfx3*.cab" set "Net35Source=!cmd_source!\sxs"
+  if defined cmd_source if exist "!cmd_source!\setup.exe" set _offdu=1
+  set AutoStart=1
+  set _embd=1
 )
 if %_embd% equ 0 if exist "!_cabdir!\" (
-echo.
-echo ============================================================
-echo Cleaning temporary extraction folder...
-echo ============================================================
-echo.
-rmdir /s /q "!_cabdir!\" %_Nul1%
+  echo.
+  echo ============================================================
+  echo Cleaning temporary extraction folder...
+  echo ============================================================
+  echo.
+  rmdir /s /q "!_cabdir!\" %_Nul1%
 )
 set _init=1
 
@@ -313,83 +323,91 @@ set targetname=0
 set _skpd=0
 set _skpp=0
 set uupboot=0
+:: If the target is not defined, the default target is the current path or the system path
 if %_init%==1 if "!target!"=="" if exist "*.wim" (for /f "tokens=* delims=" %%# in ('dir /b /a:-d "*.wim"') do set "target=!_work!\%%~nx#")
 if "!target!"=="" set "target=%SystemDrive%"
 if "%target:~-1%"=="\" set "target=!target:~0,-1!"
 if /i "!target!"=="%SystemDrive%" (
-if /i %xOS%==x86 (set arch=x86) else if /i %xOS%==amd64 (set arch=x64) else (set arch=arm64)
-if %_init%==1 (goto :check) else (goto :mainmenu)
+  if /i %xOS%==x86 (set arch=x86) else if /i %xOS%==amd64 (set arch=x64) else (set arch=arm64)
+  if %_init%==1 (goto :check) else (goto :mainmenu)
 )
 if /i "%target:~-4%"==".wim" (
-if exist "!target!" (
-  set wim=1
-  for %%# in ("!target!") do set "targetname=%%~nx#"&setlocal DisableDelayedExpansion&set "targetpath=%%~dp#"&setlocal EnableDelayedExpansion
+  if exist "!target!" (
+    set wim=1
+    for %%# in ("!target!") do set "targetname=%%~nx#"&setlocal DisableDelayedExpansion&set "targetpath=%%~dp#"&setlocal EnableDelayedExpansion
   )
 ) else (
-if exist "!target!\sources\install.wim" set dvd=1
-if exist "!target!\Windows\regedit.exe" set offline=1
+  if exist "!target!\sources\install.wim" set dvd=1
+  if exist "!target!\Windows\regedit.exe" set offline=1
 )
+:: online system mode
 if %offline%==0 if %wim%==0 if %dvd%==0 (if %_init%==1 (set "target=%SystemDrive%"&goto :check) else (set "MESSAGE=Specified location is not valid"&goto :E_Target))
+:: offline system mode
 if %offline%==1 (
-dir /b /ad "!target!\Windows\Servicing\Version\10.0.*" %_Nul3% || (
-dir /b /ad "!target!\Windows\Servicing\Version\11.0.*" %_Nul3% || (set "MESSAGE=Detected target offline image is not Windows NT 10.0"&goto :E_Target)
+  dir /b /ad "!target!\Windows\Servicing\Version\10.0.*" %_Nul3% || (
+    dir /b /ad "!target!\Windows\Servicing\Version\11.0.*" %_Nul3% || (set "MESSAGE=Detected target offline image is not Windows NT 10.0"&goto :E_Target)
+  )
+  for /f "tokens=3 delims=." %%# in ('dir /b /ad "!target!\Windows\Servicing\Version\1*"') do set _build=%%#
+  set "mountdir=!target!"
+  set arch=x86
+  if exist "!target!\Windows\Servicing\Packages\*~amd64~~*.mum" set arch=x64
+  if exist "!target!\Windows\Servicing\Packages\*~arm64~~*.mum" set arch=arm64
 )
-for /f "tokens=3 delims=." %%# in ('dir /b /ad "!target!\Windows\Servicing\Version\1*"') do set _build=%%#
-set "mountdir=!target!"
-set arch=x86
-if exist "!target!\Windows\Servicing\Packages\*~amd64~~*.mum" set arch=x64
-if exist "!target!\Windows\Servicing\Packages\*~arm64~~*.mum" set arch=arm64
-)
+:: wim file mode
 if %wim%==1 (
-echo.
-echo ============================================================
-echo Please wait...
-echo ============================================================
-cd /d "!targetpath!"
-dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 | find /i "Version : 10." %_Nul1% || (
-dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 | find /i "Version : 11." %_Nul1% || (set "MESSAGE=Detected wim version is not Windows NT 10.0"&goto :E_Target)
-)
-for /f "tokens=4 delims=:. " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 ^| find /i "Version :"') do set _build=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 ^| find /i "Architecture"') do set arch=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" ^| find /i "Index"') do set imgcount=%%#
-for /L %%# in (1,1,!imgcount!) do (
-  for /f "tokens=1* delims=: " %%i in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:%%# ^| findstr /b /c:"Name"') do set name%%#="%%j"
+  echo.
+  echo ============================================================
+  echo Please wait...
+  echo ============================================================
+  cd /d "!targetpath!"
+  dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 | find /i "Version : 10." %_Nul1% || (
+    dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 | find /i "Version : 11." %_Nul1% || (set "MESSAGE=Detected wim version is not Windows NT 10.0"&goto :E_Target)
   )
-set "indices=*"
-set wimfiles=1
-cd /d "!_work!"
+  for /f "tokens=4 delims=:. " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 ^| find /i "Version :"') do set _build=%%#
+  for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:1 ^| find /i "Architecture"') do set arch=%%#
+  for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" ^| find /i "Index"') do set imgcount=%%#
+  for /L %%# in (1,1,!imgcount!) do (
+    for /f "tokens=1* delims=: " %%i in ('dism.exe /english /get-wiminfo /wimfile:"%targetname%" /index:%%# ^| findstr /b /c:"Name"') do set name%%#="%%j"
+  )
+  set "indices=*"
+  set wimfiles=1
+  cd /d "!_work!"
 )
+:: dvd mode
 if %dvd%==1 (
-echo.
-echo ============================================================
-echo Please wait...
-echo ============================================================
-copy /y nul "!target!\#.rw" %_Nul3% && (del /f /q "!target!\#.rw" %_Nul3%) || (set copytarget=1)
-cd /d "!target!"
-dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 | find /i "Version : 10." %_Nul1% || (
-dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 | find /i "Version : 11." %_Nul1% || (set "MESSAGE=Detected install.wim version is not Windows NT 10.0"&goto :E_Target)
-)
-for /f "tokens=4 delims=:. " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 ^| find /i "Version :"') do set _build=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 ^| find /i "Architecture"') do set arch=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" ^| find /i "Index"') do set imgcount=%%#
-for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\boot.wim" ^| find /i "Index"') do set bootimg=%%#
-for /L %%# in (1,1,!imgcount!) do (
-  for /f "tokens=1* delims=: " %%i in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:%%# ^| findstr /b /c:"Name"') do set name%%#="%%j"
+  echo.
+  echo ============================================================
+  echo Please wait...
+  echo ============================================================
+  :: try read/write
+  copy /y nul "!target!\#.rw" %_Nul3% && (del /f /q "!target!\#.rw" %_Nul3%) || (set copytarget=1)
+  cd /d "!target!"
+  dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 | find /i "Version : 10." %_Nul1% || (
+    dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 | find /i "Version : 11." %_Nul1% || (set "MESSAGE=Detected install.wim version is not Windows NT 10.0"&goto :E_Target)
   )
-set "indices=*"
-set "targetname=install.wim"
-set wimfiles=1
-cd /d "!_work!"
+  for /f "tokens=4 delims=:. " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 ^| find /i "Version :"') do set _build=%%#
+  for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:1 ^| find /i "Architecture"') do set arch=%%#
+  for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" ^| find /i "Index"') do set imgcount=%%#
+  for /f "tokens=2 delims=: " %%# in ('dism.exe /english /get-wiminfo /wimfile:"sources\boot.wim" ^| find /i "Index"') do set bootimg=%%#
+  for /L %%# in (1,1,!imgcount!) do (
+    for /f "tokens=1* delims=: " %%i in ('dism.exe /english /get-wiminfo /wimfile:"sources\install.wim" /index:%%# ^| findstr /b /c:"Name"') do set name%%#="%%j"
+  )
+  set "indices=*"
+  set "targetname=install.wim"
+  set wimfiles=1
+  cd /d "!_work!"
 )
 if %_init%==1 (goto :check) else (goto :mainmenu)
 
 :check
+:: online system mode
 if /i "!target!"=="%SystemDrive%" (
-set _build=%winbuild%
-reg.exe query %_SxS% /v W10UIclean %_Nul3% && (set onlineclean=1&set online=1&set cleanup=1)
-reg.exe query %_SxS% /v W10UIrebase %_Nul3% && (set onlineclean=1&set online=1&set cleanup=1&set resetbase=1)
+  set _build=%winbuild%
+  reg.exe query %_SxS% /v W10UIclean %_Nul3% && (set onlineclean=1&set online=1&set cleanup=1)
+  reg.exe query %_SxS% /v W10UIrebase %_Nul3% && (set onlineclean=1&set online=1&set cleanup=1&set resetbase=1)
 )
 if defined onlineclean goto :main2board
+:: patch count
 call :counter
 set "brep=!repo!"
 if %_sum%==0 set "repo="
@@ -397,6 +415,7 @@ if /i not "!dismroot!"=="dism.exe" if exist "!dismroot!" goto :mainmenu
 goto :checkadk
 
 :mainboard
+:: check system and args
 if %winbuild% lss 10240 if /i "!target!"=="%SystemDrive%" (%_Goto%)
 if %winbuild% lss 10240 if %_ADK% equ 0 (%_Goto%)
 if "!target!"=="" (%_Goto%)
@@ -408,53 +427,55 @@ if /i "!target!"=="%SystemDrive%" (set dismtarget=/online&set "mountdir=!target!
 
 :main2board
 if %_embd% neq 0 (
-echo.
+  echo.
 ) else if %autostart% neq 0 (
-echo.
+  echo.
 ) else (
-@cls
+  @cls
 )
 echo ============================================================
 echo Running W10UI %uiv%
 echo ============================================================
+:: online mode
 if %online%==1 (
-net stop trustedinstaller %_Nul3%
-net stop wuauserv %_Nul3%
-del /f /q %systemroot%\Logs\CBS\* %_Nul3%
+  net stop trustedinstaller %_Nul3%
+  net stop wuauserv %_Nul3%
+  del /f /q %systemroot%\Logs\CBS\* %_Nul3%
 )
 if not exist "%_dLog%\" mkdir "%_dLog%" %_Nul3%
 if %_embd% equ 0 del /f /q %_dLog%\* %_Nul3%
 if %_embd% equ 0 del /f /q %systemroot%\Logs\MoSetup\* %_Nul3%
 if defined onlineclean (
-if exist "%SystemRoot%\WinSxS\pending.xml" (
-  echo.
-  echo ============================================================
-  echo ERROR: you must restart the system first before cleaning up
-  echo ============================================================
-  echo.
-  echo.
-  echo Press any key to exit.
-  %_Pause%
-  goto :eof
+  if exist "%SystemRoot%\WinSxS\pending.xml" (
+    echo.
+    echo ============================================================
+    echo ERROR: you must restart the system first before cleaning up
+    echo ============================================================
+    echo.
+    echo.
+    echo Press any key to exit.
+    %_Pause%
+    goto :eof
   )
-set verb=0
-set "mountdir=!target!"
-set dismtarget=/online
-set _build=%winbuild%
-reg.exe delete %_SxS% /v W10UIclean /f %_Nul3%
-reg.exe delete %_SxS% /v W10UIrebase /f %_Nul3%
-if not exist "!_cabdir!\" mkdir "!_cabdir!"
-call :cleanup
-goto :fin
+  set verb=0
+  set "mountdir=!target!"
+  set dismtarget=/online
+  set _build=%winbuild%
+  reg.exe delete %_SxS% /v W10UIclean /f %_Nul3%
+  reg.exe delete %_SxS% /v W10UIrebase /f %_Nul3%
+  if not exist "!_cabdir!\" mkdir "!_cabdir!"
+  call :cleanup
+  goto :fin
 )
+:: dvd mode
 if %dvd%==1 if %copytarget%==1 (
-echo.
-echo ============================================================
-echo Copying DVD Drive contents to work directory...
-echo ============================================================
-if exist "!_work!\DVD10UI\" rmdir /s /q "!_work!\DVD10UI\" %_Nul1%
-robocopy "!target!" "!_work!\DVD10UI" /E /A-:R >nul
-set "target=!_work!\DVD10UI"
+  echo.
+  echo ============================================================
+  echo Copying DVD Drive contents to work directory...
+  echo ============================================================
+  if exist "!_work!\DVD10UI\" rmdir /s /q "!_work!\DVD10UI\" %_Nul1%
+  robocopy "!target!" "!_work!\DVD10UI" /E /A-:R >nul
+  set "target=!_work!\DVD10UI"
 )
 call :extract
 if %_sum%==0 goto :fin
@@ -578,31 +599,34 @@ goto :eof
 if /i %arch%==x86 (set efifile=bootia32.efi&set sss=x86) else if /i %arch%==x64 (set efifile=bootx64.efi&set sss=amd64) else (set efifile=bootaa64.efi&set sss=arm64)
 if %_embd% equ 0 call :cleaner
 if not exist "!_cabdir!\" mkdir "!_cabdir!"
+:: patch detect
 call :detector
+:: cab
 if %_cab% neq 0 (
-set msuchk=0&set count=0
-if %online%==0 if exist "!repo!\*defender-dism*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b "!repo!\*defender-dism*%arch%*.cab"') do (set "package=%%#"&call :cab1def)
-if exist "!repo!\*Windows1*-KB*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "!repo!\*Windows1*-KB*%arch%*.cab"') do (set "package=%%#"&call :cab1)
+  set msuchk=0&set count=0
+  if %online%==0 if exist "!repo!\*defender-dism*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b "!repo!\*defender-dism*%arch%*.cab"') do (set "package=%%#"&call :cab1def)
+  if exist "!repo!\*Windows1*-KB*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "!repo!\*Windows1*-KB*%arch%*.cab"') do (set "package=%%#"&call :cab1)
 )
+:: msu
 if %_msu% neq 0 (
-echo.
-if %_embd% equ 0 (
-echo ============================================================
-echo Extracting .cab files from .msu files...
-echo ============================================================
-echo.
-)
-set msuchk=1&set count=0&set msucab=&set uuppkg=
-for /f "tokens=* delims=" %%# in ('dir /b /on "!repo!\*Windows1*-KB*%arch%*.msu"') do (set "package=%%#"&set "dest=%%~n#"&call :cab1)
+  echo.
+  if %_embd% equ 0 (
+    echo ============================================================
+    echo Extracting .cab files from .msu files...
+    echo ============================================================
+    echo.
+  )
+  set msuchk=1&set count=0&set msucab=&set uuppkg=
+  for /f "tokens=* delims=" %%# in ('dir /b /on "!repo!\*Windows1*-KB*%arch%*.msu"') do (set "package=%%#"&set "dest=%%~n#"&call :cab1)
 )
 if %_sum%==0 (echo.&echo All applicable updates are detected as installed&goto :eof)
 echo.
 if %_embd% equ 0 (
-echo ============================================================
-echo Extracting files from update cabinets ^(.cab^)...
-echo *** This will require some disk space, please be patient ***
-echo ============================================================
-echo.
+  echo ============================================================
+  echo Extracting files from update cabinets ^(.cab^)...
+  echo *** This will require some disk space, please be patient ***
+  echo ============================================================
+  echo.
 )
 cd /d "!_cabdir!"
 set _sum=0
@@ -640,16 +664,16 @@ for /f "tokens=%tn% delims=-" %%A in ('echo !package!') do (
 if "%kb%"=="" goto :eof
 if %wimfiles% equ 1 goto :cab1proceed
 for %%# in (
-Package_for_%kb%~
-Package_for_ServicingStack
-Package_for_RollupFix
-Package_for_DotNetRollup
-Package_for_WindowsExperienceFeaturePack
+  Package_for_%kb%~
+  Package_for_ServicingStack
+  Package_for_RollupFix
+  Package_for_DotNetRollup
+  Package_for_WindowsExperienceFeaturePack
 ) do if exist "!target!\Windows\Servicing\packages\%%#*.mum" (
-set "mumcheck=!target!\Windows\Servicing\packages\%%#*.mum"
-set "pkgcheck=%%#"
-call :mumversion !pkgcheck:~0,14!
-if !skip!==1 (set /a _sum-=1&if %msuchk% equ 1 (set /a _msu-=1&goto :eof) else (set /a _cab-=1&goto :eof))
+  set "mumcheck=!target!\Windows\Servicing\packages\%%#*.mum"
+  set "pkgcheck=%%#"
+  call :mumversion !pkgcheck:~0,14!
+  if !skip!==1 (set /a _sum-=1&if %msuchk% equ 1 (set /a _msu-=1&goto :eof) else (set /a _cab-=1&goto :eof))
 )
 :cab1proceed
 if %msuchk% equ 0 goto :eof
@@ -661,10 +685,10 @@ cd /d "!_work!"
 set /a count+=1
 if %uupmsu% equ 1 goto :msu1
 if %_embd% equ 0 (
-set "msucab=!msucab! %kbcab%"
+  set "msucab=!msucab! %kbcab%"
 ) else (
-if exist "!repo!\%kbcab%" goto :eof
-if not exist "!repo!\%kbcab%" findstr /i /m "%kbcab%" cabmsu.txt %_Nul3% || echo %kbcab%>>cabmsu.txt
+  if exist "!repo!\%kbcab%" goto :eof
+  if not exist "!repo!\%kbcab%" findstr /i /m "%kbcab%" cabmsu.txt %_Nul3% || echo %kbcab%>>cabmsu.txt
 )
 echo %count%/%_msu%: %package%
 expand.exe -f:*Windows*.cab "!repo!\!package!" "!repo!" %_Null%
@@ -698,98 +722,98 @@ set /a count+=1
 mkdir "checker"
 expand.exe -f:update.mum "!repo!\!package!" "checker" %_Null%
 if not exist "checker\update.mum" (
-expand.exe -f:*defender*.xml "!repo!\!package!" "checker" %_Null%
-if exist "checker\*defender*.xml" (
-  echo %count%/%_sum%: %package%
-  expand.exe -f:* "!repo!\!package!" "%dest%" %_Null%
-) else (
-  echo %count%/%_sum%: %package% [Setup DU]
-  set isoupdate=!isoupdate! !package!
+  expand.exe -f:*defender*.xml "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*defender*.xml" (
+    echo %count%/%_sum%: %package%
+    expand.exe -f:* "!repo!\!package!" "%dest%" %_Null%
+  ) else (
+    echo %count%/%_sum%: %package% [Setup DU]
+    set isoupdate=!isoupdate! !package!
   )
-rmdir /s /q "checker\" %_Nul3%
-goto :eof
+  rmdir /s /q "checker\" %_Nul3%
+  goto :eof
 )
 for /f "tokens=2 delims=-" %%V in ('echo %pkgn%') do set pkgid=%%V
 expand.exe -f:*.psf.cix.xml "!repo!\!package!" "checker" %_Null%
 if exist "checker\*.psf.cix.xml" (
-if not exist "!repo!\%pkgn%.psf" if not exist "!repo!\*%pkgid%*%arch%*.psf" (
-  echo %count%/%_sum%: %package% / PSF file is missing
-  rmdir /s /q "checker\" %_Nul3%
-  goto :eof
+  if not exist "!repo!\%pkgn%.psf" if not exist "!repo!\*%pkgid%*%arch%*.psf" (
+    echo %count%/%_sum%: %package% / PSF file is missing
+    rmdir /s /q "checker\" %_Nul3%
+    goto :eof
   )
-if %psfnet% equ 0 (
-  echo %count%/%_sum%: %package% / PSFExtractor is not available
-  rmdir /s /q "checker\" %_Nul3%
-  goto :eof
+  if %psfnet% equ 0 (
+    echo %count%/%_sum%: %package% / PSFExtractor is not available
+    rmdir /s /q "checker\" %_Nul3%
+    goto :eof
   )
-set psf_%pkgn%=1
+  set psf_%pkgn%=1
 )
 if not defined isodate findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% && (
-if not exist "%SystemRoot%\temp\" mkdir "%SystemRoot%\temp" %_Nul3%
-copy /y "checker\update.mum" %SystemRoot%\temp\ %_Nul1%
-call :datemum isodate isotime
+  if not exist "%SystemRoot%\temp\" mkdir "%SystemRoot%\temp" %_Nul3%
+  copy /y "checker\update.mum" %SystemRoot%\temp\ %_Nul1%
+  call :datemum isodate isotime
 )
 expand.exe -f:toc.xml "!repo!\!package!" "checker" %_Null%
 if exist "checker\toc.xml" (
-echo %count%/%_sum%: %package% [Combined]
-expand.exe -f:* "!repo!\!package!" "%dest%" %_Null%
-if exist "%dest%\Windows1*-KB*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "%dest%\Windows1*-KB*.cab"') do (set "compkg=%%#"&call :inrenupd)
-if exist "%dest%\SSU-*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "%dest%\SSU-*%arch%*.cab"') do (set "compkg=%%#"&call :inrenssu)
-rmdir /s /q "%dest%\" %_Nul3%
-rmdir /s /q "checker\" %_Nul3%
-goto :eof
+  echo %count%/%_sum%: %package% [Combined]
+  expand.exe -f:* "!repo!\!package!" "%dest%" %_Null%
+  if exist "%dest%\Windows1*-KB*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "%dest%\Windows1*-KB*.cab"') do (set "compkg=%%#"&call :inrenupd)
+  if exist "%dest%\SSU-*%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "%dest%\SSU-*%arch%*.cab"') do (set "compkg=%%#"&call :inrenssu)
+  rmdir /s /q "%dest%\" %_Nul3%
+  rmdir /s /q "checker\" %_Nul3%
+  goto :eof
 )
 set "_type="
 if %_build% geq 17763 findstr /i /m "WinPE" "checker\update.mum" %_Nul3% && (
-%_Nul3% findstr /i /m "Edition\"" "checker\update.mum"
-if errorlevel 1 set "_type=[WinPE]"
+  %_Nul3% findstr /i /m "Edition\"" "checker\update.mum"
+  if errorlevel 1 set "_type=[WinPE]"
 )
 if not defined _type (
-expand.exe -f:*_microsoft-windows-sysreset_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-sysreset_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[WinPE]"
+  expand.exe -f:*_microsoft-windows-sysreset_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-sysreset_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[WinPE]"
 )
 if not defined _type (
-expand.exe -f:*_microsoft-windows-i..dsetup-rejuvenation_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-i..dsetup-rejuvenation_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[WinPE]"
+  expand.exe -f:*_microsoft-windows-i..dsetup-rejuvenation_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-i..dsetup-rejuvenation_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[WinPE]"
 )
 if not defined _type (
-findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% && set "_type=[LCU]"
+  findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% && set "_type=[LCU]"
 )
 if not defined _type (
-findstr /i /m "Package_for_WindowsExperienceFeaturePack" "checker\update.mum" %_Nul3% && set "_type=[UX FeaturePack]"
+  findstr /i /m "Package_for_WindowsExperienceFeaturePack" "checker\update.mum" %_Nul3% && set "_type=[UX FeaturePack]"
 )
 if not defined _type (
-expand.exe -f:*_microsoft-windows-servicingstack_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-servicingstack_*.manifest" set "_type=[SSU]"
+  expand.exe -f:*_microsoft-windows-servicingstack_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-servicingstack_*.manifest" set "_type=[SSU]"
 )
 if not defined _type (
-expand.exe -f:*_netfx4*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_netfx4*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[NetFx]"
+  expand.exe -f:*_netfx4*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_netfx4*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[NetFx]"
 )
 if not defined _type (
-expand.exe -f:*_microsoft-windows-s..boot-firmwareupdate_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-s..boot-firmwareupdate_*.manifest" set "_type=[SecureBoot]"
+  expand.exe -f:*_microsoft-windows-s..boot-firmwareupdate_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-s..boot-firmwareupdate_*.manifest" set "_type=[SecureBoot]"
 )
 if not defined _type if %_build% geq 18362 (
-expand.exe -f:microsoft-windows-*enablement-package~*.mum "!repo!\!package!" "checker" %_Null%
-if exist "checker\microsoft-windows-*enablement-package~*.mum" set "_type=[Enablement]"
-if exist "checker\Microsoft-Windows-1909Enablement-Package~*.mum" set "_fixEP=18363"
-if exist "checker\Microsoft-Windows-20H2Enablement-Package~*.mum" set "_fixEP=19042"
-if exist "checker\Microsoft-Windows-21H1Enablement-Package~*.mum" set "_fixEP=19043"
-if exist "checker\Microsoft-Windows-21H2Enablement-Package~*.mum" set "_fixEP=19044"
-if exist "checker\Microsoft-Windows-22H2Enablement-Package~*.mum" if %_build% lss 22000 set "_fixEP=19045"
+  expand.exe -f:microsoft-windows-*enablement-package~*.mum "!repo!\!package!" "checker" %_Null%
+  if exist "checker\microsoft-windows-*enablement-package~*.mum" set "_type=[Enablement]"
+  if exist "checker\Microsoft-Windows-1909Enablement-Package~*.mum" set "_fixEP=18363"
+  if exist "checker\Microsoft-Windows-20H2Enablement-Package~*.mum" set "_fixEP=19042"
+  if exist "checker\Microsoft-Windows-21H1Enablement-Package~*.mum" set "_fixEP=19043"
+  if exist "checker\Microsoft-Windows-21H2Enablement-Package~*.mum" set "_fixEP=19044"
+  if exist "checker\Microsoft-Windows-22H2Enablement-Package~*.mum" if %_build% lss 22000 set "_fixEP=19045"
 )
 if %_build% geq 18362 if exist "checker\*enablement-package*.mum" (
-expand.exe -f:*_microsoft-windows-e..-firsttimeinstaller_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-e..-firsttimeinstaller_*.manifest" set "_type=[Enablement / EdgeChromium]"
+  expand.exe -f:*_microsoft-windows-e..-firsttimeinstaller_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-e..-firsttimeinstaller_*.manifest" set "_type=[Enablement / EdgeChromium]"
 )
 if not defined _type (
-expand.exe -f:*_microsoft-windows-e..-firsttimeinstaller_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_microsoft-windows-e..-firsttimeinstaller_*.manifest" set "_type=[EdgeChromium]"
+  expand.exe -f:*_microsoft-windows-e..-firsttimeinstaller_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_microsoft-windows-e..-firsttimeinstaller_*.manifest" set "_type=[EdgeChromium]"
 )
 if not defined _type (
-expand.exe -f:*_adobe-flash-for-windows_*.manifest "!repo!\!package!" "checker" %_Null%
-if exist "checker\*_adobe-flash-for-windows_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[Flash]"
+  expand.exe -f:*_adobe-flash-for-windows_*.manifest "!repo!\!package!" "checker" %_Null%
+  if exist "checker\*_adobe-flash-for-windows_*.manifest" findstr /i /m "Package_for_RollupFix" "checker\update.mum" %_Nul3% || set "_type=[Flash]"
 )
 echo %count%/%_sum%: %package% %_type%
 if not exist "%dest%\update.mum" expand.exe -f:* "!repo!\!package!" "%dest%" %_Null% || (
@@ -806,32 +830,32 @@ if exist "%dest%\*cablist.ini" (
 )
 set _sbst=0
 if defined psf_%pkgn% (
-if not exist "%dest%\express.psf.cix.xml" for /f %%# in ('dir /b /a:-d "%dest%\*.psf.cix.xml"') do rename "%dest%\%%#" express.psf.cix.xml %_Nul3%
-subst %_sdr% "!_cabdir!" %_Nul3% && set _sbst=1
-if !_sbst! equ 1 pushd %_sdr%
-if not exist "%package%" (
-  copy /y "!repo!\%pkgn%.*" . %_Nul3%
-  if not exist "%pkgn%.psf" for /f %%# in ('dir /b /a:-d "!repo!\*%pkgid%*%arch%*.psf"') do copy /y "!repo!\%%#" %pkgn%.psf %_Nul3%
+  if not exist "%dest%\express.psf.cix.xml" for /f %%# in ('dir /b /a:-d "%dest%\*.psf.cix.xml"') do rename "%dest%\%%#" express.psf.cix.xml %_Nul3%
+  subst %_sdr% "!_cabdir!" %_Nul3% && set _sbst=1
+  if !_sbst! equ 1 pushd %_sdr%
+  if not exist "%package%" (
+    copy /y "!repo!\%pkgn%.*" . %_Nul3%
+    if not exist "%pkgn%.psf" for /f %%# in ('dir /b /a:-d "!repo!\*%pkgid%*%arch%*.psf"') do copy /y "!repo!\%%#" %pkgn%.psf %_Nul3%
   )
-if not exist "PSFExtractor.exe" (
-  setlocal
-  set "TMP=%SystemRoot%\Temp"
-  set "TEMP=%SystemRoot%\Temp"
+  if not exist "PSFExtractor.exe" (
+    setlocal
+    set "TMP=%SystemRoot%\Temp"
+    set "TEMP=%SystemRoot%\Temp"
   )
 )
 if defined psf_%pkgn% (
-if not exist "PSFExtractor.exe" (
-  %_Nul3% powershell -nop -c "$d='!cd!';$f=[IO.File]::ReadAllText('!_batp!') -split ':embdbin\:.*';iex ($f[1]);X 1"
-  endlocal
+  if not exist "PSFExtractor.exe" (
+    %_Nul3% powershell -nop -c "$d='!cd!';$f=[IO.File]::ReadAllText('!_batp!') -split ':embdbin\:.*';iex ($f[1]);X 1"
+    endlocal
   )
-PSFExtractor.exe %package% %_Null%
-if !errorlevel! neq 0 (
-  echo Error: failed to extract PSF update
-  rmdir /s /q "%dest%\" %_Nul3%
-  set psf_%pkgn%=
+  PSFExtractor.exe %package% %_Null%
+  if !errorlevel! neq 0 (
+    echo Error: failed to extract PSF update
+    rmdir /s /q "%dest%\" %_Nul3%
+    set psf_%pkgn%=
   )
-if !_sbst! equ 1 popd
-if !_sbst! equ 1 subst %_sdr% /d %_Nul3%
+  if !_sbst! equ 1 popd
+  if !_sbst! equ 1 subst %_sdr% /d %_Nul3%
 )
 rmdir /s /q "checker\" %_Nul3%
 goto :eof
@@ -1645,6 +1669,7 @@ set /a _sum=%_msu%+%_cab%
 goto :eof
 
 :counter
+:: patch count
 set _msu=0
 set _cab=0
 set _sum=0
@@ -1652,34 +1677,34 @@ cd /d "!repo!"
 if exist "SSU-*-%arch%*.msu" for /f "tokens=* delims=" %%# in ('dir /b /on "SSU-*-%arch%*.msu"') do (set "ssupkg=%%#"&call :tmprenssu)
 if exist "SSU-*-%arch%*.cab" for /f "tokens=* delims=" %%# in ('dir /b /on "SSU-*-%arch%*.cab"') do (set "ssupkg=%%#"&call :tmprenssu)
 if exist "*Windows1*-KB*%arch%*.msu" (
-for /f "tokens=* delims=" %%# in ('dir /b /on "*Windows1*-KB*%arch%*.msu"') do (
-  call set /a _msu+=1
-  set "_name=%%#"
-  if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
-  if /i "!_name:~0,18!"=="AMD64_X86_ARM-all-" ren "!_name!" "!_name:~18!"
-  if /i "!_name:~0,14!"=="AMD64_X86-all-" ren "!_name!" "!_name:~14!"
-  if /i "!_name:~0,10!"=="AMD64-all-" ren "!_name!" "!_name:~10!"
-  if /i "!_name:~0,10!"=="ARM64-all-" ren "!_name!" "!_name:~10!"
-  if /i "!_name:~0,8!"=="X86-all-" ren "!_name!" "!_name:~8!"
+  for /f "tokens=* delims=" %%# in ('dir /b /on "*Windows1*-KB*%arch%*.msu"') do (
+    call set /a _msu+=1
+    set "_name=%%#"
+    if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
+    if /i "!_name:~0,18!"=="AMD64_X86_ARM-all-" ren "!_name!" "!_name:~18!"
+    if /i "!_name:~0,14!"=="AMD64_X86-all-" ren "!_name!" "!_name:~14!"
+    if /i "!_name:~0,10!"=="AMD64-all-" ren "!_name!" "!_name:~10!"
+    if /i "!_name:~0,10!"=="ARM64-all-" ren "!_name!" "!_name:~10!"
+    if /i "!_name:~0,8!"=="X86-all-" ren "!_name!" "!_name:~8!"
   )
 )
 if exist "*Windows1*-KB*%arch%*.cab" (
-for /f "tokens=* delims=" %%# in ('dir /b /on "*Windows1*-KB*%arch%*.cab"') do (
-  call set /a _cab+=1
-  set "_name=%%#"
-  if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
-  if /i "!_name:~0,18!"=="AMD64_X86_ARM-all-" ren "!_name!" "!_name:~18!"
-  if /i "!_name:~0,14!"=="AMD64_X86-all-" ren "!_name!" "!_name:~14!"
-  if /i "!_name:~0,10!"=="AMD64-all-" ren "!_name!" "!_name:~10!"
-  if /i "!_name:~0,10!"=="ARM64-all-" ren "!_name!" "!_name:~10!"
-  if /i "!_name:~0,8!"=="X86-all-" ren "!_name!" "!_name:~8!"
+  for /f "tokens=* delims=" %%# in ('dir /b /on "*Windows1*-KB*%arch%*.cab"') do (
+    call set /a _cab+=1
+    set "_name=%%#"
+    if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
+    if /i "!_name:~0,18!"=="AMD64_X86_ARM-all-" ren "!_name!" "!_name:~18!"
+    if /i "!_name:~0,14!"=="AMD64_X86-all-" ren "!_name!" "!_name:~14!"
+    if /i "!_name:~0,10!"=="AMD64-all-" ren "!_name!" "!_name:~10!"
+    if /i "!_name:~0,10!"=="ARM64-all-" ren "!_name!" "!_name:~10!"
+    if /i "!_name:~0,8!"=="X86-all-" ren "!_name!" "!_name:~8!"
   )
 )
 if %online%==0 if exist "*defender-dism*%arch%*.cab" (
-for /f "tokens=* delims=" %%# in ('dir /b "*defender-dism*%arch%*.cab"') do (
-  call set /a _cab+=1
-  set "_name=%%#"
-  if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
+  for /f "tokens=* delims=" %%# in ('dir /b "*defender-dism*%arch%*.cab"') do (
+    call set /a _cab+=1
+    set "_name=%%#"
+    if not "!_name!"=="!_name: =!" ren "!_name!" "!_name: =!"
   )
 )
 cd /d "!_work!"
@@ -1736,18 +1761,18 @@ if exist "!_cabdir!\cmpcab.txt" (
   cd /d "!_work!"
 )
 if exist "!_cabdir!\" (
-echo.
-echo ============================================================
-echo Removing temporary extracted files...
-echo ============================================================
-echo.
-rmdir /s /q "!_cabdir!\" %_Nul1%
+  echo.
+  echo ============================================================
+  echo Removing temporary extracted files...
+  echo ============================================================
+  echo.
+  rmdir /s /q "!_cabdir!\" %_Nul1%
 )
 if exist "!_cabdir!\" (
-mkdir %_drv%\_del286 %_Null%
-robocopy %_drv%\_del286 "!_cabdir!" /MIR %_Null%
-rmdir /s /q %_drv%\_del286\ %_Null%
-rmdir /s /q "!_cabdir!\" %_Nul3%
+  mkdir %_drv%\_del286 %_Null%
+  robocopy %_drv%\_del286 "!_cabdir!" /MIR %_Null%
+  rmdir /s /q %_drv%\_del286\ %_Null%
+  rmdir /s /q "!_cabdir!\" %_Nul3%
 )
 goto :eof
 
@@ -2141,12 +2166,12 @@ if %wowRegKeyPathFound% equ 0 (
 for /f "skip=2 tokens=2*" %%i in ('reg.exe query "%regKeyPath%" /v KitsRoot10') do set "KitsRoot=%%j"
 set "DandIRoot=%KitsRoot%Assessment and Deployment Kit\Deployment Tools"
 if exist "%DandIRoot%\%xOS%\DISM\dism.exe" (
-set _ADK=1
-set "showdism=Windows NT 10.0 ADK"
-set "Path=%DandIRoot%\%xOS%\DISM;%SysPath%;%SystemRoot%;%SysPath%\Wbem;%SysPath%\WindowsPowerShell\v1.0\"
+  set _ADK=1
+  set "showdism=Windows NT 10.0 ADK"
+  set "Path=%DandIRoot%\%xOS%\DISM;%SysPath%;%SystemRoot%;%SysPath%\Wbem;%SysPath%\WindowsPowerShell\v1.0\"
 )
 if exist "%DandIRoot%\%xOS%\Oscdimg\oscdimg.exe" (
-set "_oscdimg=%DandIRoot%\%xOS%\Oscdimg\oscdimg.exe"
+  set "_oscdimg=%DandIRoot%\%xOS%\Oscdimg\oscdimg.exe"
 )
 goto :mainmenu
 
@@ -2289,36 +2314,39 @@ goto :mainmenu
 if %autostart%==1 goto :mainboard
 @cls
 echo ======================= W10UI %uiv% ==========================
+:: print configuration
 if /i "!target!"=="%SystemDrive%" (
-if %winbuild% lss 10240 (echo [1] Select offline target) else (echo [1] Target ^(%arch%^): Current OS)
+  :: online system mode
+  if %winbuild% lss 10240 (echo [1] Select offline target) else (echo [1] Target ^(%arch%^): Current OS)
 ) else (
-if /i "!target!"=="" (echo [1] Select offline target) else (echo [1] Target ^(%arch%^): "!target!")
+  :: offline/wim/dvd mode
+  if /i "!target!"=="" (echo [1] Select offline target) else (echo [1] Target ^(%arch%^): "!target!")
 )
 echo.
 if "!repo!"=="" (echo [2] Select updates location) else (echo [2] Updates: "!repo!")
 echo.
 if %winbuild% lss 10240 (
-if %_ADK% equ 0 (echo [3] Select Windows NT 10.0 dism.exe) else (echo [3] DISM: "!showdism!")
+  if %_ADK% equ 0 (echo [3] Select Windows NT 10.0 dism.exe) else (echo [3] DISM: "!showdism!")
 ) else (
-echo [3] DISM: "!showdism!"
+  echo [3] DISM: "!showdism!"
 )
 echo.
 if %net35%==1 (echo [4] Enable .NET 3.5: YES) else (echo [4] Enable .NET 3.5: NO)
 echo.
 if %cleanup%==0 (
-echo [5] Cleanup System Image: NO
+  echo [5] Cleanup System Image: NO
 ) else (
-if %resetbase%==0 (echo [5] Cleanup System Image: YES      [6] Reset Image Base: NO) else (echo [5] Cleanup System Image: YES      [6] Reset Image Base: YES)
+  if %resetbase%==0 (echo [5] Cleanup System Image: YES      [6] Reset Image Base: NO) else (echo [5] Cleanup System Image: YES      [6] Reset Image Base: YES)
 )
 if %wimfiles%==1 (
-if /i "%targetname%"=="install.wim" (echo.&if %winre%==1 (echo [7] Update WinRE.wim: YES) else (echo [7] Update WinRE.wim: NO))
-if %imgcount% gtr 1 (
-echo.
-if "%indices%"=="*" echo [8] %targetname% selected indexes: ALL ^(%imgcount%^)
-if not "%indices%"=="*" (if %keep%==1 (echo [8] %targetname% selected indexes: %indices% / [K] Keep indexes: Selected) else (if %keep%==0 echo [8] %targetname% selected indexes: %indices% / [K] Keep indexes: ALL))
-)
-echo.
-echo [M] Mount Directory: "!mountdir!"
+  if /i "%targetname%"=="install.wim" (echo.&if %winre%==1 (echo [7] Update WinRE.wim: YES) else (echo [7] Update WinRE.wim: NO))
+  if %imgcount% gtr 1 (
+    echo.
+    if "%indices%"=="*" echo [8] %targetname% selected indexes: ALL ^(%imgcount%^)
+    if not "%indices%"=="*" (if %keep%==1 (echo [8] %targetname% selected indexes: %indices% / [K] Keep indexes: Selected) else (if %keep%==0 echo [8] %targetname% selected indexes: %indices% / [K] Keep indexes: ALL))
+  )
+  echo.
+  echo [M] Mount Directory: "!mountdir!"
 )
 echo.
 echo [E] Extraction Directory: "!_cabdir!"
